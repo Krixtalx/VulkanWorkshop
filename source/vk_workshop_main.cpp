@@ -52,21 +52,21 @@ int main()
 	for (size_t i = 0; i < WIDTH * HEIGHT * 4; i += 4) {
 		// For concurrent frame at index 0:
 		static_assert(0 < CONCURRENT_FRAMES);
-		(*clearColorData)[0][i + 0] = 0; // TODO Part 1: Set a clear color of your liking!
+		(*clearColorData)[0][i + 0] = 0;
 		(*clearColorData)[0][i + 1] = 0;
 		(*clearColorData)[0][i + 2] = 255;
 		(*clearColorData)[0][i + 3] = 255;
 
 		// For concurrent frame at index 1:
 		static_assert(1 < CONCURRENT_FRAMES);
-		(*clearColorData)[1][i + 0] = 0; // TODO Part 1: Set a clear color of your liking!
+		(*clearColorData)[1][i + 0] = 0;
 		(*clearColorData)[1][i + 1] = 255;
 		(*clearColorData)[1][i + 2] = 0;
 		(*clearColorData)[1][i + 3] = 255;
 
 		// For concurrent frame at index 2:
 		static_assert(2 < CONCURRENT_FRAMES);
-		(*clearColorData)[2][i + 0] = 255; // TODO Part 1: Set a clear color of your liking!
+		(*clearColorData)[2][i + 0] = 255;
 		(*clearColorData)[2][i + 1] = 0;
 		(*clearColorData)[2][i + 2] = 0;
 		(*clearColorData)[2][i + 3] = 255;
@@ -89,7 +89,7 @@ int main()
 		}
 
 		// Bind the buffer handle to the memory:
-		device.bindBufferMemory(clearBuffers[currentOffset], memory, createInfo.size * currentOffset); // TODO Part 1: Use only ONE memory allocation for all buffers, and bind them to different offsets!
+		device.bindBufferMemory(clearBuffers[currentOffset], memory, createInfo.size * currentOffset);
 
 		// Copy the colors of your liking into the buffer's memory:
 		auto clearColorMappedMemory = device.mapMemory(memory, createInfo.size * currentOffset, createInfo.size);
@@ -127,18 +127,27 @@ int main()
 		//   The very same imageAvailableSemaphore is set as a "wait semaphore" to the VkSubmitInfo below. (*1)
 		auto commandBuffer = helpers::allocate_command_buffer(device, commandPool);
 		commandBuffer.begin(vk::CommandBufferBeginInfo().setFlags(vk::CommandBufferUsageFlagBits::eOneTimeSubmit));
-		//
-		// Attention:   The following call (which is vkCmdCopyBufferToImage in disguise) is producing validation errors (see console)
-		// TODO Part 1: Fix those validation errors by adding suitable image layout transitions!
-		//				Feel free to use helpers::establish_pipeline_barrier_with_image_layout_transition
-		//				
+		vk::PipelineStageFlags src(VK_PIPELINE_STAGE_2_TOP_OF_PIPE_BIT);
+		vk::PipelineStageFlags dst(VK_PIPELINE_STAGE_TRANSFER_BIT);
+		vk::AccessFlags srcFlag(VK_ACCESS_NONE);
+		vk::AccessFlags dstFlag(VK_ACCESS_TRANSFER_WRITE_BIT);
+		helpers::establish_pipeline_barrier_with_image_layout_transition(commandBuffer, src, dst, srcFlag, dstFlag, currentSwapchainImage, vk::ImageLayout::eUndefined, vk::ImageLayout::eTransferDstOptimal);
 		helpers::copy_buffer_to_image(commandBuffer, clearBuffers[swapChainImageIndex], currentSwapchainImage, 800, 800);
+		helpers::establish_pipeline_barrier_with_image_layout_transition(
+			commandBuffer, 
+			vk::PipelineStageFlagBits::eTransfer, 
+			vk::PipelineStageFlagBits::eBottomOfPipe,
+			vk::AccessFlagBits::eTransferRead,
+			vk::AccessFlagBits::eMemoryWrite,
+			currentSwapchainImage, 
+			vk::ImageLayout::eTransferDstOptimal, 
+			vk::ImageLayout::ePresentSrcKHR);
 		commandBuffer.end();
 
 		// Create a semaphore that will be signalled when rendering has finished:
 		auto renderFinishedSemaphore = device.createSemaphore(vk::SemaphoreCreateInfo{});
 		// Submit the command buffer
-		vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eAllCommands; // TODO Part 1: Can we wait in a specific/later stage?
+		vk::PipelineStageFlags waitStage = vk::PipelineStageFlagBits::eTransfer;
 		auto submitInfo = vk::SubmitInfo{}
 			.setCommandBufferCount(1u)
 			.setPCommandBuffers(&commandBuffer)
@@ -151,8 +160,8 @@ int main()
 
 		// Present the image to the screen:
 												// Also the present instruction is producing validation errors because the image is not in the right layout.
-		auto presentInfo = vk::PresentInfoKHR{} // TODO Part 1: Add suitable image layout transitions, s.t. the image is in vk::ImageLayout::ePresentSrcKHR layout!
-			.setSwapchainCount(1u)              //              Think about where the right place would be to add those image layout transitions!
+		auto presentInfo = vk::PresentInfoKHR{}
+			.setSwapchainCount(1u)             
 			.setPSwapchains(&swapchain)
 			.setPImageIndices(&swapChainImageIndex)
 			.setWaitSemaphoreCount(1u)
