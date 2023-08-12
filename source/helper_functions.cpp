@@ -196,7 +196,6 @@ namespace helpers
 		size_t imageDataSize = width * height * desiredColorChannels;
 
 		// Convert RGB -> BGR
-		// TODO: Not sure if this is a good idea on all different GPUs. Probably it's not. If the image looks odd => try something else here.
 		for (int i = 0; i < imageDataSize; i += desiredColorChannels) {
 			stbi_uc tmp = pixels[i];
 			pixels[i] = pixels[i+2];
