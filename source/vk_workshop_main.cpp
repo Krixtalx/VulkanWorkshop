@@ -450,7 +450,7 @@ int main()
 			.setClearValueCount(2u).setPClearValues(clearValues.data());
 		commandBuffer.beginRenderPass(renderPassBeginInfo, vk::SubpassContents::eInline);
 
-		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline);
+		commandBuffer.bindPipeline(vk::PipelineBindPoint::eGraphics, graphicsPipeline.value);
 
 		commandBuffer.bindDescriptorSets(
 			vk::PipelineBindPoint::eGraphics, pipelineLayout, 
@@ -583,7 +583,7 @@ int main()
 	device.waitIdle(); // Wait idle before destroying anything that might still be in use currently
 	device.destroyDescriptorPool(descriptorPool);
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) { device.freeCommandBuffers(commandPool, graphicsDrawCommandBuffers[i]); }
-	device.destroyPipeline(graphicsPipeline);
+	device.destroyPipeline(graphicsPipeline.value);
 	device.destroyPipelineLayout(pipelineLayout);
 	device.destroyDescriptorSetLayout(descriptorSetLayout);
 	for (size_t i = 0; i < CONCURRENT_FRAMES; ++i) {
